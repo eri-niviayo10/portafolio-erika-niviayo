@@ -2,9 +2,30 @@
  * Script.js para el Portafolio de Eri Niviayo
  * Incluye: Animación 3D de Malla de Alambre (Three.js), Partículas (particles.js),
  * Transición de Entrada (GSAP), Rotación de Palabras (GSAP) y Menú Móvil.
- * * Versión 6.4: Corrección CLAVE de ReferenceError: Reestructuración de funciones Three.js del Hero
- * para garantizar la correcta inicialización del bucle automático (startImageLoop).
+ * * Versión 6.5: Corrección CLAVE de ReferenceError: Arreglo de URLs en array textureUrls
+ * y reestructuración de variables de configuración.
  */
+
+// =======================================================
+// 1. CONFIGURACIÓN GLOBAL (URLs Base) 👈 NUEVA POSICIÓN
+// =======================================================
+
+// URL base del repositorio para las imágenes (útil si todas están en la misma carpeta)
+const BASE_URL = 'https://raw.githubusercontent.com/eri-niviayo10/portafolio-erika-niviayo/main/img/';
+
+// 👈 Array CORRECTO de URLs de imagen para la transición del Hero
+// USAMOS comillas simples/dobles o backticks para definir strings
+const textureUrls = [ 
+    // Ahora usamos la BASE_URL y concatenamos el nombre del archivo
+    `${BASE_URL}hero1.jpg`,
+    `${BASE_URL}hero2.jpg`,
+    `${BASE_URL}hero3.jpg`,
+    `${BASE_URL}hero4.jpg`,
+];
+
+// URL del mapa de desplazamiento
+const displacementUrl = `${BASE_URL}disp.jpg`;
+
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Inicialización de Elementos DOM
@@ -30,22 +51,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let textures = []; // Array para almacenar las texturas de imagen
     let displacementMap; // La textura del mapa de desplazamiento/ruido
     let mesh; // La malla de plano con el ShaderMaterial
-    let contentImages = [ // 👈 Lista de archivos de imagen para la transición
-        "./img/hero1.jpg", 
-        "./img/hero2.jpg",
-        "./img/hero3.jpg",
-        "./img/hero4.jpg",
-        
-    ]; 
+    // ❌ ELIMINADO: contentImages (reemplazado por textureUrls en la parte superior)
+    
     let currentImageIndex = 0; // Índice de la imagen que se muestra actualmente
     let isTransitioning = false;
     const transitionDuration = 1.5; // Duración de la transición GSAP (en segundos)
     const container = document.getElementById('hero-webgl-canvas'); // Contenedor del canvas principal
 
     // =======================================================
-    // 7.6. Lógica de Transición y Bucle Automático (MOVIDO ARRIBA)
-    // 
-    // Estas funciones deben estar definidas ANTES de ser llamadas en loadTextures()
+    // 7.6. Lógica de Transición y Bucle Automático
     // =======================================================
     
     /**
@@ -408,7 +422,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const loadPromises = [];
 
         // Cargar imágenes de contenido
-        contentImages.forEach(src => {
+        // 🚨 USAMOS el array 'textureUrls' definido arriba 
+        textureUrls.forEach(src => {
             const promise = new Promise((resolve, reject) => {
                 loader.load(src, (texture) => {
                     texture.minFilter = THREE.LinearFilter;
@@ -424,8 +439,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Cargar mapa de desplazamiento
         const displacementPromise = new Promise((resolve, reject) => {
-            // 🚨 Asegúrate de que la ruta sea correcta. Hemos usado ./img/disp.jpg
-            loader.load("./img/disp.jpg", (texture) => { 
+            // 🚨 USAMOS la variable 'displacementUrl'
+            loader.load(displacementUrl, (texture) => { 
                 displacementMap = texture;
                 displacementMap.wrapS = THREE.RepeatWrapping;
                 displacementMap.wrapT = THREE.RepeatWrapping;
