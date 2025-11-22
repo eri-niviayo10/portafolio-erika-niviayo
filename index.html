@@ -14,7 +14,7 @@
     <div class="preloader">
         <div id="particles-js"></div> <div class="preloader-content">
             <div class="preloader-animation">
-                </div>
+                <canvas id="hero-webgl-canvas"></canvas> </div>
             <div class="preloader-text">
                 <p class="logo-name">ERI NIVIAYO</p>
                 <p class="loading-message">
@@ -60,34 +60,30 @@
 
         <section id="hero" class="hero-section">
         <div class="hero-content">
-                
-                <canvas id="hero-webgl-canvas"></canvas> 
+            
+            <h1 class="hero-title">
+                <span class="word-line role-changer-container">
+                <span class="rotating-role-word active">MÁS ALLÁ DE</span>
+                    <span class="rotating-role-word">FUERA DE LÍMITES</span>
+                    <span class="rotating-role-word">EL SIGUIENTE NIVEL</span>
+                </span>
+            </h1>
 
-                <h1 class="hero-title">
-                    <span class="word-line role-changer-container">
-                    <span class="rotating-role-word active">MÁS ALLÁ DE</span>
-                        <span class="rotating-role-word">FUERA DE LÍMITES</span>
-                        <span class="rotating-role-word">EL SIGUIENTE NIVEL</span>
-                    </span>
-                </h1>
+            <div class="social-icons">
+                <a href="#" aria-label="Correo Electrónico"><i class="fas fa-envelope"></i></a>
+                <a href="#" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                <a href="#" aria-label="Awwwards"><span class="awwwards-w">W.</span></a>
+            </div>
 
-                <div class="social-icons">
-                    <a href="#" aria-label="Correo Electrónico"><i class="fas fa-envelope"></i></a>
-                    <a href="#" aria-label="GitHub"><i class="fab fa-github"></i></a>
-                    <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
-                    <a href="#" aria-label="Awwwards"><span class="awwwards-w">W.</span></a>
-                </div>
+            <div class="side-nominee-text">
+                <span class="nominee-text">W.</span>
+                <span class="nominee-text">Nominee</span>
+            </div>
 
-                <div class="side-nominee-text">
-                    <span class="nominee-text">W.</span>
-                    <span class="nominee-text">Nominee</span>
-                </div>
-
-</div>
-</section>
-<section id="about" class="about-section">
-
-
+        </div>
+        </section>
+        <section id="about" class="about-section">
             <h2 style="color: white;">/ACERCA DE MÍ</h2>
         </section>
         
@@ -104,21 +100,18 @@
 
     <script id="vertex-shader" type="x-shader/x-vertex">
         varying vec2 vUv; 
-        uniform vec2 uMouse;     // 👈 Añade el mouse como uniforme
-    uniform float uProgress;
+        uniform vec2 uMouse; 
+        uniform float uProgress;
 
         void main() {
             vUv = uv;
-           // CALCULAMOS EL DESPLAZAMIENTO BASADO EN EL CURSOR
-        vec3 displacedPosition = position;
-        float dist = distance(uv, uMouse * 0.5 + 0.5); 
-        
-        // Deformación Z
-        displacedPosition.z += sin(dist * 10.0) * 0.01; 
-        
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(displacedPosition, 1.0);
-    }
-</script>
+            vec3 displacedPosition = position;
+            float dist = distance(uv, uMouse * 0.5 + 0.5); 
+            displacedPosition.z += sin(dist * 10.0) * 0.01; 
+            
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(displacedPosition, 1.0);
+        }
+    </script>
     <script id="fragment-shader" type="x-shader/x-fragment">
         uniform float uProgress;
         uniform sampler2D uTexture1;
@@ -130,33 +123,24 @@
         vec4 transition(vec2 uv) {
         float dispValue = texture2D(uDisp, uv).r; 
 
-        // Desplazamos las coordenadas UV de ambas texturas
         vec2 displacedUv1 = uv + (uProgress * dispValue * 0.5);
         vec2 displacedUv2 = uv - ((1.0 - uProgress) * dispValue * 0.5);
         vec4 color1 = texture2D(uTexture1, displacedUv1);
         vec4 color2 = texture2D(uTexture2, displacedUv2);
         return mix(color1, color2, uProgress);
-    }
+        }
 
-    void main() {
-        gl_FragColor = transition(vUv);
-    }
-</script>
-
-    <script id="fragment-shader" type="x-shader/x-fragment">
-</script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
-<script type="module" src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js"></script>
-
-<script type="module">
-    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
-    window.GLTFLoader = GLTFLoader; // Exportar globalmente
-</script>
+        void main() {
+            gl_FragColor = transition(vUv);
+        }
+    </script>
 
 
-<script type="module" src="script.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+    <script src="script.js"></script>
 </body>
 </html>
-
