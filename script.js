@@ -349,167 +349,179 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 7.1. Inicialización de la Escena del Hero ---
     function initHeroThreeJs() {
-        if (typeof THREE === 'undefined' || !container) {
-            console.error("Three.js not defined or canvas container missing.");
-            return;
-        }
-        
+    if (typeof THREE === 'undefined' || !container) {
+        console.error("Three.js not defined or canvas container missing.");
+        return;
+    }
+    
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    heroScene = new THREE.Scene();
+
+    // Usamos una cámara Ortográfica para la escena 2D 
+    heroCamera = new THREE.OrthographicCamera(
+        -width / 2, width / 2, 
+        height / 2, -height / 2, 
+        0.1, 1000 // 🛑 CORRECCIÓN: Near plane a 0.1 para asegurar que Z=0 se vea.
+    );
+    heroCamera.position.z = 1; 
+
+    heroRenderer = new THREE.WebGLRenderer({ 
+        canvas: container, 
+        antialias: true, 
+        alpha: true 
+    });
+    heroRenderer.setSize(width, height);
+    heroRenderer.setPixelRatio(window.devicePixelRatio);
+    heroRenderer.setClearColor(0x000000, 0); 
+    
+    // Manejar el redimensionamiento del canvas del Hero
+    window.addEventListener('resize', onHeroResize);
+
+    // Cargar los recursos
+    loadTextures();
+}
+
+// --- 7.2. Manejo de Redimensionamiento del Hero ---
+function onHeroResize() {
+    if (heroCamera && heroRenderer && mesh) {
         const width = container.clientWidth;
         const height = container.clientHeight;
 
-        heroScene = new THREE.Scene();
+        // 1. Ajustar la cámara
+        heroCamera.left = -width / 2;
+        heroCamera.right = width / 2;
+        heroCamera.top = height / 2;
+        heroCamera.bottom = -height / 2;
+        heroCamera.updateProjectionMatrix();
 
-        // Usamos una cámara Ortográfica para la escena 2D 
-        heroCamera = new THREE.OrthographicCamera(
-            -width / 2, width / 2, 
-            height / 2, -height / 2, 
-            1, 1000 
-        );
-        heroCamera.position.z = 1; 
-
-        heroRenderer = new THREE.WebGLRenderer({ 
-            canvas: container, 
-            antialias: true, 
-            alpha: true 
-        });
+        // 2. Ajustar el renderizador
         heroRenderer.setSize(width, height);
-        heroRenderer.setPixelRatio(window.devicePixelRatio);
-        heroRenderer.setClearColor(0x000000, 0); 
-        
-        // Manejar el redimensionamiento del canvas del Hero
-        window.addEventListener('resize', onHeroResize);
 
-        // Cargar los recursos
-        loadTextures();
-    }
+        // 4. Recalcular el uniforme de resolución (Aspect Ratio)
+        if (textures.length > 0) {
+            const imageAspect = textures[0].image.width / textures[0].image.height;
+            const canvasAspect = width / height;
 
-    // --- 7.2. Manejo de Redimensionamiento del Hero ---
-    function onHeroResize() {
-        if (heroCamera && heroRenderer && mesh) {
-            const width = container.clientWidth;
-            const height = container.clientHeight;
-
-            // 1. Ajustar la cámara
-            heroCamera.left = -width / 2;
-            heroCamera.right = width / 2;
-            heroCamera.top = height / 2;
-            heroCamera.bottom = -height / 2;
-            heroCamera.updateProjectionMatrix();
-
-            // 2. Ajustar el renderizador
-            heroRenderer.setSize(width, height);
-
-            // 4. Recalcular el uniforme de resolución (Aspect Ratio)
-            if (textures.length > 0) {
-                const imageAspect = textures[0].image.width / textures[0].image.height;
-                const canvasAspect = width / height;
-
-                if (canvasAspect > imageAspect) {
-                    mesh.material.uniforms.uResolution.value.x = canvasAspect / imageAspect;
-                    mesh.material.uniforms.uResolution.value.y = 1;
-                } else {
-                    mesh.material.uniforms.uResolution.value.x = 1;
-                    mesh.material.uniforms.uResolution.value.y = imageAspect / canvasAspect;
-                }
+            if (canvasAspect > imageAspect) {
+                mesh.material.uniforms.uResolution.value.x = canvasAspect / imageAspect;
+                mesh.material.uniforms.uResolution.value.y = 1;
+            } else {
+                mesh.material.uniforms.uResolution.value.x = 1;
+                mesh.material.uniforms.uResolution.value.y = imageAspect / canvasAspect;
             }
         }
     }
+}
 
 
-    // --- 7.3. Carga de Texturas (Imágenes y Mapa de Ruido) ---
-    function loadTextures() {
-        const loader = new THREE.TextureLoader();
-        const loadPromises = [];
+// --- 7.3. Carga de Texturas (Imágenes y Mapa de Ruido) ---
+function loadTextures() {
+    const loader = new THREE.TextureLoader();
+    const loadPromises = [];
 
-        // Cargar imágenes de contenido
-        // 🚨 USAMOS el array 'textureUrls' definido arriba 
-        textureUrls.forEach(src => {
-            const promise = new Promise((resolve, reject) => {
-                loader.load(src, (texture) => {
-                    texture.minFilter = THREE.LinearFilter;
-                    texture.magFilter = THREE.LinearFilter;
-                    texture.wrapS = THREE.ClampToEdgeWrapping;
-                    texture.wrapT = THREE.ClampToEdgeWrapping;
-                    textures.push(texture);
-                    resolve();
-                }, undefined, reject);
-            });
-            loadPromises.push(promise);
-        });
-
-        // Cargar mapa de desplazamiento
-        const displacementPromise = new Promise((resolve, reject) => {
-            // 🚨 USAMOS la variable 'displacementUrl'
-            loader.load(displacementUrl, (texture) => { 
-                displacementMap = texture;
-                displacementMap.wrapS = THREE.RepeatWrapping;
-                displacementMap.wrapT = THREE.RepeatWrapping;
+    // Cargar imágenes de contenido
+    // 🚨 USAMOS el array 'textureUrls' definido arriba 
+    textureUrls.forEach(src => {
+        const promise = new Promise((resolve, reject) => {
+            loader.load(src, (texture) => {
+                texture.minFilter = THREE.LinearFilter;
+                texture.magFilter = THREE.LinearFilter;
+                texture.wrapS = THREE.ClampToEdgeWrapping;
+                texture.wrapT = THREE.ClampToEdgeWrapping;
+                textures.push(texture);
                 resolve();
             }, undefined, reject);
         });
-        loadPromises.push(displacementPromise);
-
-        // Cuando todos los recursos estén cargados:
-        Promise.all(loadPromises).then(() => {
-            console.log('Todas las texturas cargadas. Iniciando Hero Scene.');
-            createMesh();
-            animateHero(); // Bucle de renderizado
-            startImageLoop(); // 👈 LLAMADA CLAVE: Inicia el bucle automático
-        }).catch(error => {
-            console.error("Error al cargar las texturas:", error);
-        });
-    }
-
-    // --- 7.4. Creación de la Malla (Mesh) con el Shader ---
-    function createMesh() {
-        const width = container.clientWidth;
-        const height = container.clientHeight;
-        
-        // 1. Definir la Geometría: Un plano simple
-        const geometry = new THREE.PlaneGeometry(width, height, 1, 1);
-
-        // 2. Definir los Uniforms
-        const uniforms = {
-            uProgress: { value: 0.0 },
-            uTexture1: { value: textures[0] }, 
-            uTexture2: { value: textures[1] || textures[0] }, 
-            uDisp: { value: displacementMap },
-            uMouse: { value: new THREE.Vector2(0, 0) }, 
-            uResolution: { value: new THREE.Vector4(1, 1, 0, 0) } 
-        };
-        
-        // 3. Crear el Shader Material
-        const material = new THREE.ShaderMaterial({
-            uniforms: uniforms,
-            vertexShader: document.getElementById('vertex-shader').textContent,
-            fragmentShader: document.getElementById('fragment-shader').textContent,
-            transparent: true
-        });
-
-        // 4. Crear la Malla y Añadir a la Escena
-        mesh = new THREE.Mesh(geometry, material);
-        heroScene.add(mesh);
-        
-        // Ajuste inicial de la resolución
-        onHeroResize();
-    }
-
-    // --- 7.5. Bucle de Renderizado del Hero ---
-    function animateHero() {
-        requestAnimationFrame(animateHero); 
-        heroRenderer.render(heroScene, heroCamera); 
-    }
-    
-    // Ajustar el canvas al cambiar el tamaño de la ventana
-    window.addEventListener('resize', () => {
-        if (camera && renderer && preloaderAnimationDiv) {
-            const width = preloaderAnimationDiv.clientWidth;
-            const height = preloaderAnimationDiv.clientHeight;
-            camera.aspect = width / height;
-            camera.updateProjectionMatrix();
-            renderer.setSize(width, height);
-        }
+        loadPromises.push(promise);
     });
+
+    // Cargar mapa de desplazamiento
+    const displacementPromise = new Promise((resolve, reject) => {
+        // 🚨 USAMOS la variable 'displacementUrl'
+        loader.load(displacementUrl, (texture) => { 
+            displacementMap = texture;
+            displacementMap.wrapS = THREE.RepeatWrapping;
+            displacementMap.wrapT = THREE.RepeatWrapping;
+            resolve();
+        }, undefined, reject);
+    });
+    loadPromises.push(displacementPromise);
+
+    // Cuando todos los recursos estén cargados:
+    Promise.all(loadPromises).then(() => {
+        console.log('Todas las texturas cargadas. Iniciando Hero Scene.');
+        createMesh();
+        animateHero(); // Bucle de renderizado
+        startImageLoop(); // 👈 LLAMADA CLAVE: Inicia el bucle automático
+    }).catch(error => {
+        console.error("Error al cargar las texturas:", error);
+    });
+}
+
+// --- 7.4. Creación de la Malla (Mesh) con el Shader ---
+function createMesh() {
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    // 🛑 LOG DE DEPURACIÓN 1
+    console.log('Dimensiones del Contenedor:', width, height); 
+    
+    // 1. Definir la Geometría: Un plano simple
+    const geometry = new THREE.PlaneGeometry(width, height, 1, 1);
+
+    // 2. Definir los Uniforms
+    const uniforms = {
+        uProgress: { value: 0.0 },
+        uTexture1: { value: textures[0] }, 
+        uTexture2: { value: textures[1] || textures[0] }, 
+        uDisp: { value: displacementMap },
+        uMouse: { value: new THREE.Vector2(0, 0) }, 
+        uResolution: { value: new THREE.Vector4(1, 1, 0, 0) } 
+    };
+    
+    // 3. Crear el Shader Material
+    const material = new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        vertexShader: document.getElementById('vertex-shader').textContent,
+        fragmentShader: document.getElementById('fragment-shader').textContent,
+        transparent: true
+    });
+
+    // 4. Crear la Malla y Añadir a la Escena
+    mesh = new THREE.Mesh(geometry, material);
+    
+    // 🛑 CORRECCIÓN CRÍTICA: Mover la malla fuera del near plane de la cámara
+    mesh.position.z = 0; 
+    
+    heroScene.add(mesh);
+
+    // 🛑 LOGS DE DEPURACIÓN 2
+    console.log('Posición Z de la malla:', mesh.position.z);
+    console.log('Malla es visible:', mesh.visible);
+
+    // Ajuste inicial de la resolución
+    onHeroResize();
+}
+
+// --- 7.5. Bucle de Renderizado del Hero ---
+function animateHero() {
+    requestAnimationFrame(animateHero); 
+    heroRenderer.render(heroScene, heroCamera); 
+}
+
+// Ajustar el canvas al cambiar el tamaño de la ventana
+// NOTA: Esta sección no usa `mesh` ni `heroRenderer`, solo ajusta las partículas, lo dejamos.
+window.addEventListener('resize', () => {
+    if (camera && renderer && preloaderAnimationDiv) {
+        const width = preloaderAnimationDiv.clientWidth;
+        const height = preloaderAnimationDiv.clientHeight;
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height);
+    }
+});
 
     // =======================================================
     // 3. LÓGICA DE PARTICLES.JS
