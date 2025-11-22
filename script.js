@@ -14,9 +14,6 @@
 const BASE_URL = 'https://raw.githubusercontent.com/eri-niviayo10/portafolio-erika-niviayo/main/img/';
 const GLB_URL = `${BASE_URL}preload_torus.glb`;
 
-// ✅ CÓDIGO CORREGIDO para resolver el error "Three.js not defined"
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
-import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
 
 // 👈 Array CORRECTO de URLs de imagen para la transición del Hero
 // USAMOS comillas simples/dobles o backticks para definir strings
