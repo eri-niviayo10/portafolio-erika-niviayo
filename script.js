@@ -12,6 +12,11 @@
 
 // URL base del repositorio para las imágenes (útil si todas están en la misma carpeta)
 const BASE_URL = 'https://raw.githubusercontent.com/eri-niviayo10/portafolio-erika-niviayo/main/img/';
+const GLB_URL = `${BASE_URL}preload_torus.glb`;
+
+// ✅ CÓDIGO CORREGIDO para resolver el error "Three.js not defined"
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
 
 // 👈 Array CORRECTO de URLs de imagen para la transición del Hero
 // USAMOS comillas simples/dobles o backticks para definir strings
@@ -128,30 +133,55 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Crea un objeto 3D con una malla de alambre compleja que se deforma.
      */
-    const createDynamicWireframe = () => {
-        if (!preloaderAnimationDiv) return;
+    const createDynamicWireframe = async () => { // 👈 HACER ASÍNCRONA
+    if (!preloaderAnimationDiv) return;
+    
+    // 1. Crear la URL completa del modelo GLB
+    const fullGLBPath = BASE_URL + GLB_URL;
 
-        wireframeGroup = new THREE.Group();
+    // 2. Inicializar el cargador de modelos GLTF
+    const loader = new GLTFLoader();
+    
+    try {
+        // 3. Cargar el modelo de forma asíncrona
+        const gltf = await loader.loadAsync(fullGLBPath);
+
+        // 4. El objeto cargado es el `wireframeGroup` ahora.
+        wireframeGroup = gltf.scene; 
         
-        // --- Geometría Base (Torus Knot) ---
-        geometry = new THREE.TorusKnotGeometry(1.5, 0.4, 100, 32); 
-        
-        // Material de línea brillante cian 
-        const material = new THREE.LineBasicMaterial({ 
-            color: 0x00FFFF, // Cyan
-            linewidth: 2,    
-            transparent: true,
-            opacity: 0.9,
-            blending: THREE.AdditiveBlending 
+        // 5. Opcional: Recorrer para aplicar material de malla de alambre y capturar la geometría/malla.
+        wireframeGroup.traverse((child) => {
+            if (child.isMesh) {
+                // Almacenamos la malla principal como `lineSegments` para reutilizar la lógica de deformación/dispersión
+                lineSegments = new THREE.LineSegments( 
+                    new THREE.WireframeGeometry( child.geometry ), // Usamos la geometría del modelo
+                    new THREE.LineBasicMaterial({ 
+                        color: 0x00FFFF, // Cyan
+                        linewidth: 2,    
+                        transparent: true,
+                        opacity: 0.9,
+                        blending: THREE.AdditiveBlending 
+                    }) 
+                );
+                // NOTA: Debes eliminar el `child` original de su padre si solo quieres el wireframe.
+                // En este caso, simplemente lo añadiremos al grupo.
+            }
         });
-
-        // Crear los LineSegments a partir de la geometría
-        lineSegments = new THREE.LineSegments( 
-            new THREE.WireframeGeometry( geometry ), 
-            material 
-        );
         
-        // Almacenamos las posiciones iniciales y vectores de dispersión
+        // Si no se encontró ninguna malla, salimos.
+        if (!lineSegments) {
+             console.error('Modelo GLB cargado pero no se encontró una malla válida.');
+             return;
+        }
+
+        // Reemplazar el `wireframeGroup` con la nueva malla de alambre
+        wireframeGroup = new THREE.Group();
+        wireframeGroup.add(lineSegments);
+
+
+        // --- Lógica de Dispersión y Posiciones Iniciales (REUSADA) ---
+        // Debes mover la lógica de dispersión que estaba en el original
+        // y aplicarla a `lineSegments.geometry` aquí.
         const initialPositions = Array.from(lineSegments.geometry.attributes.position.array);
         lineSegments.geometry.setAttribute('initialPosition', new THREE.BufferAttribute(new Float32Array(initialPositions), 3));
         lineSegments.geometry.attributes.position.disperseVector = []; 
@@ -165,54 +195,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 new THREE.Vector3(x, y, z).normalize().multiplyScalar(3 + Math.random() * 2)
             );
         }
-        
-        // Necesario para la deformación dinámica
         lineSegments.geometry.attributes.position.originalArray = initialPositions;
+        // -----------------------------------------------------------
 
-        wireframeGroup.add(lineSegments);
-        
-        // Ajuste de escala
+
+        // Ajuste de escala (si es necesario)
         wireframeGroup.scale.set(1.5, 1.5, 1.5);
         
         scene.add(wireframeGroup);
-    };
-
-    /**
-     * Inicializa la escena, cámara y renderizador de Three.js (Preloader).
-     */
-    const initThreeJs = () => {
-        if (typeof THREE === 'undefined') {
-            console.error("Three.js not defined.");
-            return;
-        }
-
-        scene = new THREE.Scene();
         
-        const width = preloaderAnimationDiv.clientWidth;
-        const height = preloaderAnimationDiv.clientHeight;
-
-        camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000); 
-        camera.position.z = 5; 
-
-        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setClearColor(0x000000, 0); 
-        renderer.setSize(width, height);
-        
-        preloaderAnimationDiv.appendChild(renderer.domElement);
-        
-        // Lights
-        const ambientLight = new THREE.AmbientLight(0x404040, 5); 
-        scene.add(ambientLight);
-        
-        createDynamicWireframe();
-        animateThreeJs();
-        
-        // *** EVENTO DE CLICK ***
-        if (enterButton) {
-            enterButton.addEventListener('click', disintegrate);
-        }
-    };
-    
+    } catch (error) {
+        console.error('Error al cargar el modelo GLB:', fullGLBPath, error);
+    }
+};
+       
     /**
      * Aplica una sutil deformación sinusoidal (pulsación) al objeto 3D.
      */
@@ -259,7 +255,45 @@ document.addEventListener('DOMContentLoaded', () => {
         
         renderer.render(scene, camera);
     };
+
+
+    /**
+ * Inicializa la escena, cámara y renderizador de Three.js (Preloader).
+ */
+const initThreeJs = () => {
+    if (typeof THREE === 'undefined') {
+        console.error("Three.js not defined.");
+        return;
+    }
+
+    scene = new THREE.Scene();
     
+    const width = preloaderAnimationDiv.clientWidth;
+    const height = preloaderAnimationDiv.clientHeight;
+
+    camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000); 
+    camera.position.z = 5; 
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setClearColor(0x000000, 0); 
+    renderer.setSize(width, height);
+    
+    preloaderAnimationDiv.appendChild(renderer.domElement);
+    
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0x404040, 5); 
+    scene.add(ambientLight);
+    
+    // LLAMADA CLAVE MODIFICADA: Ahora espera a que el modelo GLB se cargue.
+    createDynamicWireframe().then(() => {
+        animateThreeJs();
+    });
+    
+    // *** EVENTO DE CLICK ***
+    if (enterButton) {
+        enterButton.addEventListener('click', disintegrate);
+    }
+};
     /**
      * Ejecuta la animación de desintegración de la malla de alambre.
      */
@@ -702,4 +736,5 @@ window.addEventListener('resize', () => {
     // Ejecución al cargar el DOM
     initParticles(); 
     initThreeJs(); 
+    
 });
