@@ -1,11 +1,15 @@
 // =======================================================
-// 1. CONFIGURACIÓN GLOBAL (URLs Base) 
-// Ya no usamos 'import', las librerías son variables globales (THREE, GLTFLoader, gsap)
+// ** PORTAFOLIO ERI NIVIAYO **
+// Versión 6.6: Corrección final del Scope y Material
+// =======================================================
+
+// =======================================================
+// 1. CONFIGURACIÓN GLOBAL (URLs Base)
+// Las librerías Three.js y GLTFLoader se cargan globalmente en index.html
 // =======================================================
 const BASE_URL = 'https://raw.githubusercontent.com/eri-niviayo10/portafolio-erika-niviayo/main/img/';
 const GLB_URL = `${BASE_URL}preload_torus.glb`;
 
-// ARRAY CORRECTO de URLs de Imagen para la Transición del Hero
 const textureUrls = [
     `${BASE_URL}hero1.jpg`,
     `${BASE_URL}hero2.jpg`,
@@ -13,7 +17,6 @@ const textureUrls = [
     `${BASE_URL}hero4.jpg`,
 ];
 
-// URL del mapa de desplazamiento
 const displacementUrl = `${BASE_URL}disp.jpg`;
 
 
@@ -34,94 +37,101 @@ document.addEventListener('DOMContentLoaded', () => {
     const roleChangerWords = document.querySelectorAll('.rotating-role-word');
     let currentRoleIndex = 0;
     
-    // Variables para la deformación dinámica
+    // ✅ Variables GLOBALES para Three.js (Scope Corregido)
+    let scene, camera, renderer;
+    let mesh;
+    let material;
+    let uniforms;
     let uMouse = new THREE.Vector2(0.0, 0.0); 
     
+    // ✅ Inicialización del GLTFLoader
+    // Se crea fuera de la función de carga para asegurar su disponibilidad
+    const loader = new THREE.GLTFLoader(); 
+
     // =======================================================
     // 3. INICIALIZACIÓN DE THREE.JS Y PARTICLES.JS
     // =======================================================
     
     initParticles();
     
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, preloaderAnimation.clientWidth / preloaderAnimation.clientHeight, 0.1, 10);
+    scene = new THREE.Scene();
+    
+    // Usamos clientWidth/Height del contenedor para el aspecto y tamaño
+    const width = preloaderAnimation.clientWidth;
+    const height = preloaderAnimation.clientHeight;
+
+    camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 10);
     camera.position.z = 2.5;
 
-    const renderer = new THREE.WebGLRenderer({
+    renderer = new THREE.WebGLRenderer({
         canvas: document.getElementById('hero-webgl-canvas'),
         antialias: true,
-        alpha: true // Permite que el fondo sea transparente
+        alpha: true 
     });
-    renderer.setSize(preloaderAnimation.clientWidth, preloaderAnimation.clientHeight);
-
-    let mesh;
-    let material;
-    let uniforms;
-
+    renderer.setSize(width, height);
+    
     // Redimensionar la escena
     window.addEventListener('resize', () => {
-        const width = preloaderAnimation.clientWidth;
-        const height = preloaderAnimation.clientHeight;
+        const newWidth = preloaderAnimation.clientWidth;
+        const newHeight = preloaderAnimation.clientHeight;
 
-        renderer.setSize(width, height);
-        camera.aspect = width / height;
+        renderer.setSize(newWidth, newHeight);
+        camera.aspect = newWidth / newHeight;
         camera.updateProjectionMatrix();
-
-        if (mesh) {
-            mesh.scale.set(1, 1, 1);
-        }
     });
+
 
     // =======================================================
     // 4. FUNCIÓN: Carga del Modelo 3D (Wireframe)
     // =======================================================
 
     function createDynamicWireframe() {
-        // 2. Inicializar el cargador de modelos GLTF
-        // ✅ CORRECCIÓN: Usamos THREE.GLTFLoader ya que se cargó globalmente
-        const loader = new THREE.GLTFLoader(); 
 
         loader.load(
             GLB_URL,
             (gltf) => {
-                let torus = gltf.scene.children[0]; // Asume que el toro es el primer hijo
-
-                // 3. Configuración de la Malla (Mesh) y Material
-                mesh = torus.geometry;
+                // El modelo GLB es una escena, tomamos el primer objeto como el toro
+                let torus = gltf.scene.children[0];
                 
-                // Definición de uniformes para los shaders
-                uniforms = {
-                    uProgress: { value: 0.0 },
-                    uMouse: { value: uMouse },
-                    uTexture1: { value: null }, // Se cargará después
-                    uTexture2: { value: null }, // Se cargará después
-                    uDisp: { value: null }, // Se cargará después
-                };
+                // Si el modelo GLB tiene más de una malla, podríamos necesitar un bucle:
+                // torus.traverse((child) => { if (child.isMesh) { torus = child; } });
 
-                // Material con los shaders que definiste en el HTML
-                material = new THREE.ShaderMaterial({
-                    uniforms: uniforms,
-                    vertexShader: document.getElementById('vertex-shader').textContent,
-                    fragmentShader: document.getElementById('fragment-shader').textContent,
+                // ✅ CORRECCIÓN FINAL: Usamos MeshBasicMaterial para el wireframe simple
+                material = new THREE.MeshBasicMaterial({
+                    color: 0x00FFC5,
                     wireframe: true,
+                    transparent: true,
+                    opacity: 0.8
                 });
 
                 // Crear la malla final
-                mesh = new THREE.Mesh(torus.geometry, material);
-                scene.add(mesh);
-                
-                // Ajustar la escala del toro para que se vea bien en el preloader
-                mesh.scale.set(0.7, 0.7, 0.7); 
+                // NOTA: Si torus.geometry es null, aquí fallaría.
+                // Asumimos que el primer hijo de la escena GLTF tiene una geometría.
+                if (torus && torus.geometry) {
+                    mesh = new THREE.Mesh(torus.geometry, material);
+                    scene.add(mesh);
+                    
+                    // Ajustar la escala del toro
 
-                // Iniciar la animación
-                animate();
+                    mesh.position.y = -1.1;
 
-                console.log('Modelo GLB cargado y añadido a la escena.');
+                    // Ajustar la escala del toro
+
+                    mesh.scale.set(0.4, 0.4, 0.4);
+
+                    // Iniciar la animación una vez que el mesh está listo
+                    animate();
+                    
+                    console.log('Modelo GLB cargado y añadido a la escena.');
+                } else {
+                    console.error('El modelo GLB fue cargado, pero no se encontró geometría válida.');
+                }
             },
+            
             (xhr) => {
-                // Progreso de la carga (opcional)
-                console.log((xhr.loaded / xhr.total * 100) + '% cargado');
+                console.log((xhr.loaded / xhr.total * 100).toFixed(0) + '% cargado');
             },
+            
             (error) => {
                 console.error('Error al cargar el modelo GLB:', error);
             }
@@ -140,14 +150,10 @@ document.addEventListener('DOMContentLoaded', () => {
             mesh.rotation.x += 0.005;
             mesh.rotation.y += 0.005;
             
-            // Si el material tiene uniformes, los actualizamos
-            if (uniforms) {
-                 uniforms.uMouse.value.copy(uMouse);
-                 // Opcional: Animar uProgress en el preloader si deseas un efecto visual
-                 // uniforms.uProgress.value = Math.sin(Date.now() * 0.001) * 0.5 + 0.5;
-            }
+            // La rotación es visible en 3D
         }
 
+        // Renderizar la escena
         renderer.render(scene, camera);
     };
 
@@ -156,26 +162,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // =======================================================
 
     // Iniciar la carga y animación del wireframe
-    createDynamicWireframe();
+    createDynamicWireframe(); // Llama a la función ahora que todas las dependencias están definidas
 
-    // Movimiento del mouse para deformación (si hay un mesh cargado)
+    // Movimiento del mouse (solo afecta a uMouse, no usado por el MeshBasicMaterial)
     window.addEventListener('mousemove', (e) => {
-        // Normalizar coordenadas a [-1, 1]
         uMouse.x = (e.clientX / window.innerWidth) * 2 - 1;
         uMouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
     });
 
     // Lógica para mostrar el contenido principal
     enterButton.addEventListener('click', () => {
-        // Ocultar preloader con una animación suave (usando GSAP)
         gsap.to(preloader, { 
             opacity: 0, 
             duration: 1, 
             onComplete: () => {
                 preloader.classList.add('hidden');
                 mainContent.classList.remove('hidden');
-                // Opcional: Reiniciar la cámara para la sección hero si el canvas es reutilizado
-                // o iniciar el script de la sección hero aquí.
             }
         });
     });
@@ -198,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
         roleChangerWords[nextIndex].classList.add('active');
         
         currentRoleIndex = nextIndex;
-    }, 3000); // Cambia el texto cada 3 segundos
+    }, 3000);
 
 
     // =======================================================
@@ -217,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     },
                     "color": {
-                        "value": "#00FFC5" // Color verde/cercano a tu estilo
+                        "value": "#00FFC5"
                     },
                     "shape": {
                         "type": "circle",
