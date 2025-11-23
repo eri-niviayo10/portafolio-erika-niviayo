@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const menuToggle = document.querySelector('.menu-toggle');
     const navUL = document.querySelector('.main-nav ul');
     const preloaderAnimation = document.querySelector('.preloader-animation');
+
     
     // Elementos para la rotación de roles en el Hero
     const roleChangerWords = document.querySelectorAll('.rotating-role-word');
@@ -98,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // ✅ CORRECCIÓN FINAL: Usamos MeshBasicMaterial para el wireframe simple
                 material = new THREE.MeshBasicMaterial({
-                    color: 0x00FFC5,
+                    color: 0x4D105C,
                     wireframe: true,
                     transparent: true,
                     opacity: 0.8
@@ -219,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     },
                     "color": {
-                        "value": "#00FFC5"
+                        "value": "#A9A9A9"
                     },
                     "shape": {
                         "type": "circle",
@@ -239,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     "line_linked": {
                         "enable": true,
                         "distance": 150,
-                        "color": "#00FFC5",
+                        "color": "#A9A9A9",
                         "opacity": 0.4,
                         "width": 1
                     },
